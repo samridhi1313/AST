@@ -1,392 +1,203 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Search, MapPin, Calendar, TrendingUp, AlertTriangle, CheckCircle, Clock, Map, Flag } from "lucide-react"
+import React from "react"
+import { useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
-
-const issueCategories = [
-  "All Issues",
-  "Roads",
-  "Lighting",
-  "Water Supply",
-  "Cleanliness",
-  "Public Safety",
-  "Obstructions",
-]
-
-const statusOptions = ["All Status", "Reported", "In Progress", "Resolved"]
-
-const issues = [
-  {
-    id: 1,
-    title: "Large Pothole on Main Street",
-    description: "Dangerous pothole causing traffic issues and potential vehicle damage near the intersection.",
-    images: ["/placeholder.svg?height=200&width=300"],
-    reportedDate: "Dec 07, 2024",
-    location: "Main Street & 5th Ave",
-    category: "Roads",
-    status: "In Progress",
-    upvotes: 23,
-    distance: 0.8,
-    reporter: "Anonymous",
-    isFollowing: false,
-  },
-  {
-    id: 2,
-    title: "Broken Street Light",
-    description: "Street light has been flickering for weeks, creating safety concerns for pedestrians at night.",
-    images: ["/placeholder.svg?height=200&width=300"],
-    reportedDate: "Dec 06, 2024",
-    location: "Park Avenue",
-    category: "Lighting",
-    status: "Reported",
-    upvotes: 15,
-    distance: 1.2,
-    reporter: "John Smith",
-    isFollowing: true,
-  },
-  {
-    id: 3,
-    title: "Overflowing Garbage Bins",
-    description:
-      "Multiple garbage bins overflowing for several days, attracting pests and creating unsanitary conditions.",
-    images: ["/placeholder.svg?height=200&width=300"],
-    reportedDate: "Dec 05, 2024",
-    location: "Central Park Entrance",
-    category: "Cleanliness",
-    status: "Resolved",
-    upvotes: 31,
-    distance: 2.1,
-    reporter: "Sarah Johnson",
-    isFollowing: false,
-  },
-  {
-    id: 4,
-    title: "Open Manhole Cover",
-    description: "Dangerous open manhole without proper barriers or warning signs. Immediate attention required.",
-    images: ["/placeholder.svg?height=200&width=300"],
-    reportedDate: "Dec 08, 2024",
-    location: "Riverside Drive",
-    category: "Public Safety",
-    status: "Reported",
-    upvotes: 45,
-    distance: 1.5,
-    reporter: "Mike Chen",
-    isFollowing: false,
-  },
-]
+import Header from "../components/Header"
 
 export default function IssuesPage() {
+  const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All Issues")
   const [selectedStatus, setSelectedStatus] = useState("All Status")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [viewMode, setViewMode] = useState<"grid" | "map">("grid")
-  const [distanceFilter, setDistanceFilter] = useState("5")
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [selectedDistance, setSelectedDistance] = useState("Within 5km")
 
-  useEffect(() => {
-    // Request location permission
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          })
-        },
-        (error) => {
-          console.error("Location access denied:", error)
-        },
-      )
+  const categories = ["All Issues", "Roads", "Lighting", "Water Supply", "Cleanliness", "Public Safety", "Obstructions"]
+
+  const mockIssues = [
+    {
+      id: 1,
+      title: "Broken Manhole Cover",
+      category: "Public Safety",
+      status: "Reported",
+      upvotes: 45,
+      distance: "1.5km away",
+      description: "Dangerous open manhole without proper barriers",
+      timeAgo: "2 hours ago"
+    },
+    {
+      id: 2,
+      title: "Overflowing Garbage Bins",
+      category: "Cleanliness",
+      status: "Resolved",
+      upvotes: 31,
+      distance: "2.1km away",
+      description: "Multiple garbage bins overflowing for several days",
+      timeAgo: "1 day ago"
+    },
+    {
+      id: 3,
+      title: "Potholes on Main Street",
+      category: "Roads",
+      status: "In Progress",
+      upvotes: 23,
+      distance: "0.8km away",
+      description: "Dangerous potholes causing traffic issues and vehicle damage",
+      timeAgo: "3 days ago"
     }
-  }, [])
-
-  const filteredIssues = issues.filter((issue) => {
-    const matchesCategory = selectedCategory === "All Issues" || issue.category === selectedCategory
-    const matchesStatus = selectedStatus === "All Status" || issue.status === selectedStatus
-    const matchesSearch =
-      issue.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      issue.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesDistance = Number.parseFloat(distanceFilter) >= issue.distance
-
-    return matchesCategory && matchesStatus && matchesSearch && matchesDistance
-  })
-
-  // Sort issues by upvotes (most urgent first)
-  const sortedIssues = [...filteredIssues].sort((a, b) => b.upvotes - a.upvotes)
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "Reported":
-        return <AlertTriangle className="h-4 w-4 text-red-500" />
-      case "In Progress":
-        return <Clock className="h-4 w-4 text-yellow-500" />
-      case "Resolved":
-        return <CheckCircle className="h-4 w-4 text-green-500" />
-      default:
-        return <AlertTriangle className="h-4 w-4 text-gray-500" />
-    }
-  }
+  ]
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Reported":
-        return "bg-red-100 text-red-800"
-      case "In Progress":
-        return "bg-yellow-100 text-yellow-800"
-      case "Resolved":
-        return "bg-green-100 text-green-800"
-      default:
-        return "bg-gray-100 text-gray-800"
+      case "Reported": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+      case "In Progress": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+      case "Resolved": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
+    }
+  }
+
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case "Public Safety": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
+      case "Cleanliness": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+      case "Roads": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300"
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold gradient-bg bg-clip-text text-transparent">Community Pulse</h1>
-            </div>
-            <nav className="hidden md:flex space-x-8">
-              <Link href="/" className="text-gray-500 hover:text-purple-600">
-                Events
-              </Link>
-              <Link href="/issues" className="text-gray-900 hover:text-purple-600 font-medium">
-                Issues
-              </Link>
-              <Link href="/add-event" className="text-gray-500 hover:text-purple-600">
-                Add Event
-              </Link>
-              <Link href="/report-issue" className="text-gray-500 hover:text-purple-600">
-                Report Issue
-              </Link>
-            </nav>
-            <div className="flex items-center space-x-4">
-              <Link href="/login" className="btn-secondary">
-                Login
-              </Link>
-              <Link href="/register" className="btn-primary">
-                Sign Up
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <Header title="Community Pulse" />
 
       {/* Hero Section */}
-      <section className="gradient-bg text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl md:text-6xl font-bold mb-4">Community Issues</h2>
-          <p className="text-xl md:text-2xl mb-8 opacity-90">Report and track civic issues in your neighborhood</p>
-
-          {/* Search Bar */}
-          <div className="max-w-2xl mx-auto relative">
-            <div className="flex items-center bg-white rounded-lg shadow-lg">
-              <Search className="h-5 w-5 text-gray-400 ml-4" />
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold mb-4">Community Issues</h1>
+            <p className="text-xl mb-8">Report and track civic issues in your neighborhood</p>
+            
+            {/* Search Bar */}
+            <div className="max-w-2xl mx-auto flex gap-4">
               <input
                 type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search issues..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 px-4 py-3 text-gray-900 rounded-lg focus:outline-none"
+                className="flex-1 px-4 py-3 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
-              <button className="btn-primary m-2">Search</button>
+              <button className="px-6 py-3 bg-purple-700 hover:bg-purple-800 rounded-lg font-medium transition-colors">
+                Search
+              </button>
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Filters and View Toggle */}
-      <section className="py-8 bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            {/* Categories */}
-            <div className="flex flex-wrap gap-2">
-              {issueCategories.map((category) => (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    selectedCategory === category
-                      ? "bg-purple-600 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  {category}
-                </button>
-              ))}
-            </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Filter Tabs */}
+        <div className="mb-8">
+          <div className="flex flex-wrap gap-2 mb-4">
+            {categories.map((category) => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  selectedCategory === category
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
 
-            {/* Filters and View Toggle */}
-            <div className="flex items-center gap-4">
-              {/* Status Filter */}
+          {/* Filter Controls */}
+          <div className="flex flex-wrap gap-4 items-center justify-between">
+            <div className="flex gap-4">
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
               >
-                {statusOptions.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
+                <option>All Status</option>
+                <option>Reported</option>
+                <option>In Progress</option>
+                <option>Resolved</option>
               </select>
-
-              {/* Distance Filter */}
+              
               <select
-                value={distanceFilter}
-                onChange={(e) => setDistanceFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                value={selectedDistance}
+                onChange={(e) => setSelectedDistance(e.target.value)}
+                className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
               >
-                <option value="1">Within 1km</option>
-                <option value="3">Within 3km</option>
-                <option value="5">Within 5km</option>
+                <option>Within 5km</option>
+                <option>Within 10km</option>
+                <option>Within 20km</option>
               </select>
+            </div>
 
-              {/* View Toggle */}
-              <div className="flex bg-gray-100 rounded-lg p-1">
-                <button
-                  onClick={() => setViewMode("grid")}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                    viewMode === "grid" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600"
-                  }`}
-                >
-                  Grid
-                </button>
-                <button
-                  onClick={() => setViewMode("map")}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                    viewMode === "map" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600"
-                  }`}
-                >
-                  <Map className="h-4 w-4 inline mr-1" />
-                  Map
-                </button>
-              </div>
+            <div className="flex gap-2">
+              <button className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">
+                Grid
+              </button>
+              <button className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">
+                Map
+              </button>
             </div>
           </div>
         </div>
-      </section>
 
-      {/* Content */}
-      <section className="py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-8">
-            <h3 className="text-2xl font-bold text-gray-900">
-              {selectedCategory === "All Issues" ? "Nearby Issues" : selectedCategory}
-            </h3>
-            <div className="flex items-center gap-4">
-              <span className="text-gray-500">{sortedIssues.length} issues found</span>
-              <Link href="/report-issue" className="btn-primary">
-                Report Issue
-              </Link>
-            </div>
+        {/* Issues Section */}
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Nearby Issues</h2>
+          <div className="flex items-center gap-4">
+            <span className="text-gray-600 dark:text-gray-400">{mockIssues.length} issues found</span>
+            <Link href="/report-issue" className="btn-primary">
+              Report Issue
+            </Link>
           </div>
+        </div>
 
-          {viewMode === "grid" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sortedIssues.map((issue) => (
-                <Link key={issue.id} href={`/issue/${issue.id}`}>
-                  <div className="event-card bg-white rounded-lg shadow-md overflow-hidden cursor-pointer">
-                    <div className="relative">
-                      <Image
-                        src={issue.images[0] || "/placeholder.svg"}
-                        alt={issue.title}
-                        width={300}
-                        height={200}
-                        className="w-full h-48 object-cover"
-                      />
-
-                      {/* Status Badge */}
-                      <div className="absolute top-3 left-3">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getStatusColor(issue.status)}`}
-                        >
-                          {getStatusIcon(issue.status)}
-                          {issue.status}
-                        </span>
-                      </div>
-
-                      {/* Category Badge */}
-                      <div className="absolute top-3 right-3">
-                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                          {issue.category}
-                        </span>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="absolute bottom-3 right-3 flex space-x-2">
-                        <button className="p-1.5 bg-white/80 rounded-full hover:bg-white">
-                          <Flag className="h-4 w-4 text-gray-600" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="p-6">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4 text-green-600" />
-                          <span className="text-sm text-green-600 font-medium">{issue.upvotes} upvotes</span>
-                        </div>
-                        <span className="text-sm text-gray-500">{issue.distance}km away</span>
-                      </div>
-
-                      <h4 className="text-lg font-semibold text-gray-900 mb-2">{issue.title}</h4>
-                      <p className="text-gray-600 text-sm mb-4 line-clamp-2">{issue.description}</p>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Calendar className="h-4 w-4 mr-2" />
-                          Reported on {issue.reportedDate}
-                        </div>
-                        <div className="flex items-center text-sm text-gray-500">
-                          <MapPin className="h-4 w-4 mr-2" />
-                          {issue.location}
-                        </div>
-                      </div>
-
-                      <div className="mt-4 pt-4 border-t border-gray-200">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Reported by: {issue.reporter}</span>
-                          {issue.isFollowing && (
-                            <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
-                              Following
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+        {/* Issues Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {mockIssues.map((issue) => (
+            <div key={issue.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-3">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(issue.status)}`}>
+                    {issue.status}
+                  </span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(issue.category)}`}>
+                    {issue.category}
+                  </span>
+                </div>
+                
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  {issue.title}
+                </h3>
+                
+                <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-2">
+                  {issue.description}
+                </p>
+                
+                <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-1">
+                    <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" />
+                    </svg>
+                    <span>{issue.upvotes} upvotes</span>
                   </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            /* Map View */
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="bg-gray-200 rounded-lg h-96 flex items-center justify-center">
-                <div className="text-center">
-                  <Map className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500 text-lg">Map View</p>
-                  <p className="text-gray-400 text-sm">
-                    Showing {sortedIssues.length} issues within {distanceFilter}km
-                  </p>
+                  <span>{issue.distance}</span>
+                </div>
+                
+                <div className="mt-4 text-xs text-gray-400 dark:text-gray-500">
+                  {issue.timeAgo}
                 </div>
               </div>
             </div>
-          )}
-
-          {sortedIssues.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">No issues found matching your criteria.</p>
-              <p className="text-gray-400 text-sm mt-2">Try adjusting your filters or search terms.</p>
-            </div>
-          )}
+          ))}
         </div>
-      </section>
+      </div>
     </div>
   )
 }

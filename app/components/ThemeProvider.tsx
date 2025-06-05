@@ -1,55 +1,89 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { createContext, useContext, useEffect, useState } from 'react'
 
-export default function ThemeProvider({
-  children,
-}: {
+type Theme = 'dark' | 'light' | 'system'
+
+type ThemeProviderProps = {
   children: React.ReactNode
-}) {
-  const [mounted, setMounted] = useState(false)
-  const [darkMode, setDarkMode] = useState(false)
+  defaultTheme?: Theme
+  storageKey?: string
+  attribute?: string
+  enableSystem?: boolean
+}
 
-  // Only run once component is mounted to avoid hydration mismatch
+type ThemeProviderState = {
+  theme: Theme
+  setTheme: (theme: Theme) => void
+}
+
+const initialState: ThemeProviderState = {
+  theme: 'system',
+  setTheme: () => null,
+}
+
+const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
+
+export function ThemeProvider({
+  children,
+  defaultTheme = 'system',
+  storageKey = 'theme',
+  ...props
+}: ThemeProviderProps) {
+  const [theme, setTheme] = useState<Theme>(defaultTheme)
+  const [mounted, setMounted] = useState(false)
+
   useEffect(() => {
     setMounted(true)
-    const savedTheme = localStorage.getItem('theme')
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      setDarkMode(true)
-      document.documentElement.classList.add('dark')
+    const storedTheme = localStorage.getItem(storageKey) as Theme
+    if (storedTheme) {
+      setTheme(storedTheme)
     }
-  }, [])
+  }, [storageKey])
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode)
-    if (darkMode) {
-      document.documentElement.classList.remove('dark')
-      localStorage.setItem('theme', 'light')
-    } else {
-      document.documentElement.classList.add('dark')
-      localStorage.setItem('theme', 'dark')
+  useEffect(() => {
+    if (!mounted) return
+
+    const root = window.document.documentElement
+    root.classList.remove('light', 'dark')
+
+    if (theme === 'system') {
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
+        .matches
+        ? 'dark'
+        : 'light'
+
+      root.classList.add(systemTheme)
+      return
     }
+
+    root.classList.add(theme)
+  }, [theme, mounted])
+
+  const value = {
+    theme,
+    setTheme: (theme: Theme) => {
+      localStorage.setItem(storageKey, theme)
+      setTheme(theme)
+    },
   }
 
-  // Avoid hydration mismatch by only rendering once mounted
   if (!mounted) {
     return <>{children}</>
   }
 
   return (
-    <>
-      <div className="fixed top-4 right-4 z-50">
-        <button
-          onClick={toggleDarkMode}
-          className="p-2 rounded-full bg-gray-200 dark:bg-dark-card hover:bg-gray-300 dark:hover:bg-dark-border transition-colors"
-          aria-label="Toggle dark mode"
-        >
-          {darkMode ? '🌞' : '🌙'}
-        </button>
-      </div>
+    <ThemeProviderContext.Provider {...props} value={value}>
       {children}
-    </>
+    </ThemeProviderContext.Provider>
   )
-} 
+}
+
+export const useTheme = () => {
+  const context = useContext(ThemeProviderContext)
+
+  if (context === undefined)
+    throw new Error('useTheme must be used within a ThemeProvider')
+
+  return context
+}

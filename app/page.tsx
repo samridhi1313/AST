@@ -1,392 +1,415 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Search, MapPin, Calendar, Users, Heart, Share2, Map, AlertTriangle, TrendingUp } from "lucide-react"
+import React from "react"
+import { useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
+import { usePathname } from "next/navigation"
+import DarkModeToggle from "./components/DarkModeToggle"
 
-interface TicketTier {
-  name: string
-  price: number
-  description: string
-}
-
-interface Event {
-  id: number
-  title: string
-  description: string
-  image: string
-  date: string
-  time: string
-  location: string
-  attendees: number
-  category: string
-  organizer: string
-  isFeatured: boolean
-  isPaid: boolean
-  ticketTiers?: TicketTier[]
-  distance: number
-  status: string
-  upvotes: number
-  isUrgent: boolean
-}
-
-const categories = [
-  "All Events",
-  "Music",
-  "Sports",
-  "Food & Drink",
-  "Arts & Culture",
-  "Community",
-  "Business",
-  "Health & Wellness",
-  "Lost & Found",
-]
-
-const events: Event[] = [
-  {
-    id: 1,
-    title: "Live Music Festival",
-    description: "Join us for an amazing night of live music featuring local bands and artists.",
-    image: "/placeholder.svg?height=200&width=300",
-    date: "Dec 09, 2024",
-    time: "10:30 AM",
-    location: "Central Park",
-    attendees: 27,
-    category: "Music",
-    organizer: "Music Events Co.",
-    isFeatured: true,
-    isPaid: true,
-    ticketTiers: [
-      { name: "Standard", price: 1999, description: "General admission" },
-      { name: "Gold", price: 3999, description: "Premium seating + refreshments" },
-      { name: "Platinum", price: 7999, description: "VIP experience + meet & greet" },
-    ],
-    distance: 1.2,
-    status: "upcoming",
-    upvotes: 15,
-    isUrgent: false,
-  },
-  {
-    id: 2,
-    title: "Lost Golden Retriever - Max",
-    description:
-      "Missing since yesterday evening near Riverside Park. Friendly dog, responds to 'Max'. Please contact if seen.",
-    image: "/placeholder.svg?height=200&width=300",
-    date: "Dec 08, 2024",
-    time: "6:00 PM",
-    location: "Riverside Park Area",
-    attendees: 0,
-    category: "Lost & Found",
-    organizer: "Sarah Johnson",
-    isFeatured: false,
-    isPaid: false,
-    distance: 0.8,
-    status: "urgent",
-    upvotes: 23,
-    isUrgent: true,
-  },
-  {
-    id: 3,
-    title: "Community Cleanup Drive",
-    description: "Help make our neighborhood cleaner and more beautiful. Free refreshments provided.",
-    image: "/placeholder.svg?height=200&width=300",
-    date: "Dec 12, 2024",
-    time: "9:00 AM",
-    location: "Riverside Park",
-    attendees: 15,
-    category: "Community",
-    organizer: "Green Initiative",
-    isFeatured: false,
-    isPaid: false,
-    distance: 2.1,
-    status: "upcoming",
-    upvotes: 8,
-    isUrgent: false,
-  },
-  {
-    id: 4,
-    title: "Food Truck Rally",
-    description: "Taste amazing food from local food trucks and vendors.",
-    image: "/placeholder.svg?height=200&width=300",
-    date: "Dec 15, 2024",
-    time: "12:00 PM",
-    location: "Downtown Square",
-    attendees: 42,
-    category: "Food & Drink",
-    organizer: "Foodie Events",
-    isFeatured: false,
-    isPaid: false,
-    distance: 3.2,
-    status: "upcoming",
-    upvotes: 12,
-    isUrgent: false,
-  },
-]
-
-export default function HomePage() {
-  const [selectedCategory, setSelectedCategory] = useState("All Events")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [viewMode, setViewMode] = useState<"grid" | "map">("grid")
-  const [distanceFilter, setDistanceFilter] = useState("5")
-  const [dateFilter, setDateFilter] = useState("all")
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
-  const [locationPermission, setLocationPermission] = useState<"granted" | "denied" | "pending">("pending")
-
-  useEffect(() => {
-    // Request location permission
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          })
-          setLocationPermission("granted")
-        },
-        (error) => {
-          console.error("Location access denied:", error)
-          setLocationPermission("denied")
-        },
-      )
-    }
-  }, [])
-
-  const filteredEvents = events.filter((event) => {
-    const matchesCategory = selectedCategory === "All Events" || event.category === selectedCategory
-    const matchesSearch =
-      event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesDistance = Number.parseFloat(distanceFilter) >= event.distance
-
-    let matchesDate = true
-    if (dateFilter === "today") {
-      matchesDate = event.date === "Dec 09, 2024" // Today's date
-    } else if (dateFilter === "tomorrow") {
-      matchesDate = event.date === "Dec 10, 2024"
-    } else if (dateFilter === "week") {
-      // Events within this week
-      matchesDate = true
-    }
-
-    return matchesCategory && matchesSearch && matchesDistance && matchesDate
-  })
-
-  // Sort events: urgent first, then by upvotes
-  const sortedEvents = [...filteredEvents].sort((a, b) => {
-    if (a.isUrgent && !b.isUrgent) return -1
-    if (!a.isUrgent && b.isUrgent) return 1
-    return b.upvotes - a.upvotes
-  })
-
-  const getStatusBadge = (event: any) => {
-    const now = new Date()
-    const eventDate = new Date(event.date + " " + event.time)
-
-    if (event.isUrgent) {
-      return (
-        <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium animate-pulse">URGENT</span>
-      )
-    }
-
-    const timeDiff = eventDate.getTime() - now.getTime()
-    const hoursUntil = Math.floor(timeDiff / (1000 * 60 * 60))
-
-    if (hoursUntil < 0) {
-      return <span className="bg-gray-500 text-white px-2 py-1 rounded-full text-xs font-medium">Event Ended</span>
-    } else if (hoursUntil < 2) {
-      return <span className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium">Happening Now</span>
-    } else if (hoursUntil < 24) {
-      return (
-        <span className="bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-          Starts in {hoursUntil}h
-        </span>
-      )
-    }
-
-    return null
-  }
+// Inline Header Component to avoid import issues
+function Header({ 
+  title = "Community Pulse", 
+  showBackButton = false, 
+  backHref = "/", 
+  backText = "Back" 
+}) {
+  const pathname = usePathname()
+  const isActive = (path: string) => pathname === path
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-purple-600 dark:text-purple-400">Community Pulse</h1>
-            </div>
-            <nav className="hidden md:flex space-x-8">
-              <Link href="/" className="text-gray-900 dark:text-white hover:text-purple-600 dark:hover:text-purple-400 font-medium">
-                Events
+    <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-[10000]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          <div className="flex items-center">
+            {showBackButton && (
+              <Link href={backHref} className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white mr-4">
+                <svg className="h-5 w-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                {backText}
               </Link>
-              <Link href="/issues" className="text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400">
-                Issues
-              </Link>
-              <Link href="/add-event" className="text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400">
-                Add Event
-              </Link>
-              <Link href="/report-issue" className="text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400">
-                Report Issue
-              </Link>
-            </nav>
-            <div className="flex items-center space-x-4">
-              <Link href="/login" className="btn-secondary">
-                Login
-              </Link>
-              <Link href="/register" className="btn-primary">
-                Sign Up
-              </Link>
-            </div>
+            )}
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              {title}
+            </h1>
+          </div>
+          
+          <nav className="hidden md:flex space-x-8">
+            <Link 
+              href="/" 
+              className={`transition-colors ${
+                isActive('/') 
+                  ? 'text-purple-600 dark:text-purple-400 font-medium' 
+                  : 'text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400'
+              }`}
+            >
+              Events
+            </Link>
+            <Link 
+              href="/issues" 
+              className={`transition-colors ${
+                isActive('/issues') 
+                  ? 'text-purple-600 dark:text-purple-400 font-medium' 
+                  : 'text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400'
+              }`}
+            >
+              Issues
+            </Link>
+            <Link 
+              href="/add-event" 
+              className={`transition-colors ${
+                isActive('/add-event') 
+                  ? 'text-purple-600 dark:text-purple-400 font-medium' 
+                  : 'text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400'
+              }`}
+            >
+              Add Event
+            </Link>
+            <Link 
+              href="/report-issue" 
+              className={`transition-colors ${
+                isActive('/report-issue') 
+                  ? 'text-purple-600 dark:text-purple-400 font-medium' 
+                  : 'text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400'
+              }`}
+            >
+              Report Issue
+            </Link>
+          </nav>
+          
+          <div className="flex items-center space-x-4">
+            <DarkModeToggle />
+            <Link href="/login" className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+              Login
+            </Link>
+            <Link href="/register" className="btn-primary">
+              Sign Up
+            </Link>
           </div>
         </div>
-      </header>
+      </div>
+    </header>
+  )
+}
 
-      {/* Location Banner */}
-      {locationPermission === "denied" && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-400 p-4 sticky top-16 z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <AlertTriangle className="h-5 w-5 text-yellow-400" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                  Location access is required to show nearby events. Please enable location services or enter your
-                  address manually.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+export default function EventsPage() {
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("All Events")
+  const [selectedDate, setSelectedDate] = useState("All Dates")
+
+  const categories = ["All Events", "Community", "Sports", "Education", "Health", "Arts", "Technology", "Lost & Found"]
+
+  const mockEvents = [
+    {
+      id: 1,
+      title: "Community Clean-up Drive",
+      description: "Join us for a neighborhood clean-up initiative to make our community cleaner and greener.",
+      category: "Community",
+      date: "2025-01-15",
+      time: "09:00 AM",
+      venue: "Central Park",
+      address: "123 Park Avenue, Downtown",
+      attendees: 45,
+      image: "/api/placeholder/400/200",
+      tags: ["Environment", "Volunteer", "Community Service"],
+      organizer: "Green Earth Society"
+    },
+    {
+      id: 2,
+      title: "Tech Meetup: AI & Machine Learning",
+      description: "Explore the latest trends in artificial intelligence and machine learning with industry experts.",
+      category: "Technology",
+      date: "2025-01-18",
+      time: "06:00 PM",
+      venue: "Innovation Hub",
+      address: "456 Tech Street, Silicon Valley",
+      attendees: 120,
+      image: "/api/placeholder/400/200",
+      tags: ["AI", "Machine Learning", "Networking", "Tech"],
+      organizer: "Tech Innovators"
+    },
+    {
+      id: 3,
+      title: "Lost: Golden Retriever",
+      description: "Missing golden retriever named Max. Last seen near the university campus. Reward offered.",
+      category: "Lost & Found",
+      date: "2025-01-12",
+      time: "All Day",
+      venue: "University Campus Area",
+      address: "789 University Drive",
+      attendees: 0,
+      image: "/api/placeholder/400/200",
+      tags: ["Lost Pet", "Golden Retriever", "Reward", "Urgent"],
+      organizer: "Sarah Johnson"
+    },
+    {
+      id: 4,
+      title: "Basketball Tournament",
+      description: "Annual community basketball tournament. Teams of all skill levels welcome!",
+      category: "Sports",
+      date: "2025-01-20",
+      time: "10:00 AM",
+      venue: "Community Sports Center",
+      address: "321 Sports Lane",
+      attendees: 80,
+      image: "/api/placeholder/400/200",
+      tags: ["Basketball", "Tournament", "Sports", "Competition"],
+      organizer: "Sports Club"
+    },
+    {
+      id: 5,
+      title: "Art Workshop: Watercolor Painting",
+      description: "Learn watercolor painting techniques from professional artists. All materials provided.",
+      category: "Arts",
+      date: "2025-01-22",
+      time: "02:00 PM",
+      venue: "Art Studio Downtown",
+      address: "654 Creative Street",
+      attendees: 25,
+      image: "/api/placeholder/400/200",
+      tags: ["Art", "Workshop", "Painting", "Creative"],
+      organizer: "Downtown Art Center"
+    },
+    {
+      id: 6,
+      title: "Health & Wellness Fair",
+      description: "Free health screenings, wellness tips, and healthy lifestyle demonstrations.",
+      category: "Health",
+      date: "2025-01-25",
+      time: "11:00 AM",
+      venue: "Community Center",
+      address: "987 Wellness Boulevard",
+      attendees: 150,
+      image: "/api/placeholder/400/200",
+      tags: ["Health", "Wellness", "Free Screening", "Lifestyle"],
+      organizer: "Health Department"
+    }
+  ]
+
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case "Community": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+      case "Technology": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+      case "Sports": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300"
+      case "Arts": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
+      case "Health": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+      case "Education": return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300"
+      case "Lost & Found": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
+    }
+  }
+
+  const getTagColor = (index: number) => {
+    const colors = [
+      "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-300",
+      "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300",
+      "bg-lime-100 text-lime-800 dark:bg-lime-900 dark:text-lime-300",
+      "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300"
+    ]
+    return colors[index % colors.length]
+  }
+
+  const filteredEvents = mockEvents.filter(event => {
+    const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         event.description.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesCategory = selectedCategory === "All Events" || event.category === selectedCategory
+    return matchesSearch && matchesCategory
+  })
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <Header title="Community Pulse" />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl md:text-6xl font-bold mb-4 text-white">Discover Local Events & Issues</h2>
-          <p className="text-xl md:text-2xl mb-8 text-white/90">Connect with your community within 5km radius</p>
-
-          {/* Search Bar */}
-          <div className="max-w-2xl mx-auto relative">
-            <div className="flex items-center bg-white dark:bg-gray-800 rounded-lg shadow-lg">
-              <Search className="h-5 w-5 text-gray-400 ml-4" />
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold mb-4">Discover Local Events & Issues</h1>
+            <p className="text-xl mb-8">Connect with your community through events and civic engagement</p>
+            
+            {/* Search Bar */}
+            <div className="max-w-2xl mx-auto flex gap-4">
               <input
                 type="text"
-                placeholder="Search events and issues..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full py-4 px-4 rounded-lg focus:outline-none dark:bg-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search events..."
+                className="flex-1 px-4 py-3 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
+              <button className="px-6 py-3 bg-purple-700 hover:bg-purple-800 rounded-lg font-medium transition-colors">
+                Search
+              </button>
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Main Content */}
-      <section className="bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Filters */}
-          <div className="flex flex-wrap gap-4 mb-8">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-2 rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-            >
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="px-4 py-2 rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-            >
-              <option value="all">All Dates</option>
-              <option value="today">Today</option>
-              <option value="tomorrow">Tomorrow</option>
-              <option value="week">This Week</option>
-            </select>
-
-            <select
-              value={distanceFilter}
-              onChange={(e) => setDistanceFilter(e.target.value)}
-              className="px-4 py-2 rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-            >
-              <option value="1">Within 1km</option>
-              <option value="2">Within 2km</option>
-              <option value="5">Within 5km</option>
-              <option value="10">Within 10km</option>
-            </select>
-
-            <button
-              onClick={() => setViewMode(viewMode === "grid" ? "map" : "grid")}
-              className="px-4 py-2 rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white flex items-center gap-2"
-            >
-              {viewMode === "grid" ? (
-                <>
-                  <Map className="h-5 w-5" /> Show Map
-                </>
-              ) : (
-                <>
-                  <TrendingUp className="h-5 w-5" /> Show Grid
-                </>
-              )}
-            </button>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Filter Tabs */}
+        <div className="mb-8">
+          <div className="flex flex-wrap gap-2 mb-4">
+            {categories.map((category) => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  selectedCategory === category
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                {category}
+              </button>
+            ))}
           </div>
 
-          {/* Events Grid */}
-          {viewMode === "grid" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sortedEvents.map((event) => (
-                <Link href={`/event/${event.id}`} key={event.id}>
-                  <div className="event-card bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-                    <div className="relative h-48">
-                      <Image
-                        src={event.image}
-                        alt={event.title}
-                        fill
-                        className="object-cover"
-                      />
-                      {getStatusBadge(event)}
-                    </div>
-                    <div className="p-4">
-                      <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">{event.title}</h3>
-                      <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-2">{event.description}</p>
-                      <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          {event.date}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
-                          {event.distance}km
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          {event.attendees}
-                        </div>
-                      </div>
-                      {event.isPaid && event.ticketTiers && event.ticketTiers.length > 0 && (
-                        <div className="mt-4 text-sm font-medium text-purple-600 dark:text-purple-400">
-                          From ₹{event.ticketTiers[0].price}
-                        </div>
-                      )}
-                    </div>
+          <div className="flex justify-between items-center">
+            <div className="flex gap-4">
+              <select
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+              >
+                <option>All Dates</option>
+                <option>Today</option>
+                <option>This Week</option>
+                <option>This Month</option>
+              </select>
+            </div>
+
+            <Link href="/add-event" className="btn-primary">
+              Create Event
+            </Link>
+          </div>
+        </div>
+
+        {/* Events Section */}
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Upcoming Events</h2>
+          <span className="text-gray-600 dark:text-gray-400">{filteredEvents.length} events found</span>
+        </div>
+
+        {/* Events Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredEvents.map((event) => (
+            <div key={event.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow">
+              {/* Event Image */}
+              <div className="relative h-48 bg-gray-200 dark:bg-gray-700">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-400 to-blue-500"></div>
+                
+                {/* Tags in upper right corner */}
+                <div className="absolute top-3 right-3 flex flex-wrap gap-1 max-w-[60%]">
+                  {event.tags.slice(0, 2).map((tag, index) => (
+                    <span
+                      key={tag}
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${getTagColor(index)} backdrop-blur-sm bg-opacity-90`}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                  {event.tags.length > 2 && (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300 backdrop-blur-sm bg-opacity-90">
+                      +{event.tags.length - 2}
+                    </span>
+                  )}
+                </div>
+
+                {/* Category badge in upper left */}
+                <div className="absolute top-3 left-3">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(event.category)} backdrop-blur-sm bg-opacity-90`}>
+                    {event.category}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  {event.title}
+                </h3>
+                
+                <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-2">
+                  {event.description}
+                </p>
+
+                {/* All Tags */}
+                <div className="flex flex-wrap gap-1 mb-4">
+                  {event.tags.map((tag, index) => (
+                    <span
+                      key={tag}
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${getTagColor(index)}`}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                
+                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span>{new Date(event.date).toLocaleDateString()} at {event.time}</span>
                   </div>
-                </Link>
-              ))}
+                  
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>{event.venue}</span>
+                  </div>
+                  
+                  {event.attendees > 0 && (
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                      </svg>
+                      <span>{event.attendees} attending</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span className="text-xs">by {event.organizer}</span>
+                  </div>
+                </div>
+                
+                <div className="mt-4 flex gap-2">
+                  <button className="flex-1 btn-primary text-sm py-2">
+                    {event.category === "Lost & Found" ? "Contact" : "Join Event"}
+                  </button>
+                  <button className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
             </div>
-          ) : (
-            <div className="h-[600px] bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center">
-              <p className="text-gray-500 dark:text-gray-400">Map view coming soon!</p>
-            </div>
-          )}
+          ))}
         </div>
-      </section>
+
+        {/* Quick Actions */}
+        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Create an Event</h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">Organize community events and bring people together</p>
+            <Link href="/add-event" className="btn-primary">
+              Create Event
+            </Link>
+          </div>
+          
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Report an Issue</h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">Help improve your community by reporting civic issues</p>
+            <Link href="/report-issue" className="btn-primary">
+              Report Issue
+            </Link>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

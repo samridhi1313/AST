@@ -1,14 +1,12 @@
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import CookieBanner from "@/components/cookie-banner"
-import ClientThemeProvider from "./components/ClientThemeProvider"
+import { Inter } from 'next/font/google'
+import './globals.css'
+import { ThemeProvider } from './components/ThemeProvider'
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ['latin'] })
 
-export const metadata: Metadata = {
-  title: "Community Pulse",
-  description: "Discover and join local community events and report civic issues",
+export const metadata = {
+  title: 'Community Pulse',
+  description: 'Community Events & Issues Platform',
 }
 
 export default function RootLayout({
@@ -18,13 +16,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text`}>
-        <ClientThemeProvider>
-          <main className="min-h-screen">
-            {children}
-          </main>
-          <CookieBanner />
-        </ClientThemeProvider>
+      <body className={inter.className}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )
